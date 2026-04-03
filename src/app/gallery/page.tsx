@@ -173,11 +173,9 @@ export default function GalleryPage() {
           <button onClick={() => router.push("/upload")} className="px-10 py-4 bg-slate-800 text-white rounded-full text-[10px] font-bold tracking-[0.3em] uppercase">Upload First Photo</button>
         </div>
       ) : (
-        /* ✅ columns-3 から grid-cols-3 に変更して、高さを同期させる */
         <div className="px-2 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-2 gap-y-6">
           {images.map((post, index) => (
-            <div key={post.id} className="flex flex-col group cursor-pointer" onClick={() => openModal(index)}>
-              {/* 🖼 写真部分：aspect-[3/4] で比率を固定し、object-cover で枠いっぱいに表示 */}
+            <div key={post.id} className="flex flex-col group cursor-pointer relative" onClick={() => openModal(index)}>
               <div className="relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-500 border border-slate-100 aspect-[3/4]">
                 <img 
                   src={post.thumbnailUrl} 
@@ -188,10 +186,12 @@ export default function GalleryPage() {
                 />
               </div>
 
-              {/* 📝 情報エリア：ここも位置が揃うようになります */}
               <div className="mt-2 px-0.5">
                 <div className="flex items-center justify-between mb-1">
-                  <div onClick={(e) => e.stopPropagation()} className="transform scale-75 -ml-2 origin-left">
+                  <div 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="relative z-20 transform scale-75 -ml-2 origin-left active:scale-95 transition-transform"
+                  >
                     <Like postId={post.id} />
                   </div>
                   <span className="text-[8px] text-slate-400 tracking-tighter uppercase font-light truncate max-w-[50%]">
@@ -199,7 +199,7 @@ export default function GalleryPage() {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-1 mb-2">
+                <div className="flex flex-wrap gap-1 mb-2 relative z-20">
                   {post.tags?.map((tag, i) => (
                     <Link
                       key={i}
@@ -212,7 +212,7 @@ export default function GalleryPage() {
                   ))}
                 </div>
 
-                <div onClick={(e) => e.stopPropagation()} className="transform scale-90 origin-top-left opacity-90">
+                <div onClick={(e) => e.stopPropagation()} className="relative z-20 transform scale-90 origin-top-left opacity-90">
                   <Comment postId={post.id} />
                 </div>
               </div>
@@ -221,7 +221,6 @@ export default function GalleryPage() {
         </div>
       )}
 
-      {/* モーダル・ナビゲーション部分は変更なし */}
       {currentIndex !== null && (
         <div className="fixed inset-0 z-[100] bg-slate-900/98 backdrop-blur-xl flex flex-col items-center justify-center animate-in fade-in duration-300" onClick={() => setCurrentIndex(null)}>
           <div className="absolute top-8 right-8 flex items-center gap-6" onClick={(e) => e.stopPropagation()}>
@@ -272,6 +271,7 @@ export default function GalleryPage() {
             ) : (
               <div className="space-y-3">
                 <div className="flex flex-wrap justify-center gap-3">
+                  {/* ✅ ここを修正：不要な #tag を消し、閉じタグを修正しました */}
                   {images[currentIndex].tags?.map((tag, i) => (
                     <span key={i} className="text-[10px] text-white/60">#{tag}</span>
                   ))}
