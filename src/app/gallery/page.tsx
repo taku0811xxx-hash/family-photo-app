@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../../lib/firebase";
-import { collection, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from "firebase/firestore"; 
+import { collection, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, limit } from "firebase/firestore"; // ✅ limitを追加
 import { useAuth } from "../../lib/contexts/AuthContext";
 import Comment from "../components/Comment"; 
 import Like from "../components/Like";
 import { useRouter } from "next/navigation";
-import Link from "next/link"; // 👈 タグページへのリンク用にインポート
+import Link from "next/link";
 
 type Post = {
   id: string;
@@ -35,7 +35,13 @@ export default function GalleryPage() {
 
     const fetchData = async () => {
       try {
-        const q = query(collection(db, "posts"), where("familyId", "==", familyId), orderBy("createdAt", "desc"));
+        // ✅ 最初は最新の24枚に絞ることで初期表示を高速化（枚数は調整可）
+        const q = query(
+          collection(db, "posts"), 
+          where("familyId", "==", familyId), 
+          orderBy("createdAt", "desc"),
+          limit(24) 
+        );
         const snapshot = await getDocs(q);
         const list: Post[] = [];
         snapshot.forEach((doc) => {
@@ -131,10 +137,23 @@ export default function GalleryPage() {
     }
   };
 
+  // ✅ 1. スケルトン表示（読み込み中のプレースホルダー）
   if (authLoading || isDataLoading) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
-        <p className="text-[10px] text-slate-300 tracking-[0.3em] uppercase animate-pulse">Loading Gallery...</p>
+      <div className="min-h-screen bg-[#fafafa] pb-32">
+        <header className="pt-12 pb-8 px-6 flex items-center justify-between opacity-30">
+          <div className="w-12 h-4 bg-slate-200 rounded"></div>
+          <div className="w-32 h-6 bg-slate-200 rounded"></div>
+          <div className="w-12"></div>
+        </header>
+        <div className="px-4 columns-2 md:columns-3 lg:columns-4 gap-4 space-y-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="break-inside-avoid bg-white rounded-2xl border border-slate-100 p-4 space-y-4">
+              <div className="w-full aspect-[3/4] bg-slate-100 animate-pulse rounded-xl"></div>
+              <div className="h-3 w-1/2 bg-slate-50 animate-pulse rounded"></div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -158,12 +177,19 @@ export default function GalleryPage() {
           <button onClick={() => router.push("/upload")} className="px-10 py-4 bg-slate-800 text-white rounded-full text-[10px] font-bold tracking-[0.3em] uppercase">Upload First Photo</button>
         </div>
       ) : (
-        /* 元の columnsレイアウトは維持 */
         <div className="px-4 columns-2 md:columns-3 lg:columns-4 gap-4 space-y-6">
           {images.map((post, index) => (
             <div key={post.id} className="break-inside-avoid group cursor-pointer" onClick={() => openModal(index)}>
-              <div className="relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-1 border border-slate-100">
-                <img src={post.thumbnailUrl} alt="" className="w-full h-auto block transition-transform duration-700 group-hover:scale-105" />
+              <div className="relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-1 border border-slate-100 min-h-[100px]">
+                {/* ✅ 2. 画像の最適化とフェードインアニメーション */}
+                <img 
+                  src={post.thumbnailUrl} 
+                  alt="" 
+                  loading="lazy" 
+                  decoding="async"
+                  onLoad={(e) => (e.currentTarget.style.opacity = "1")}
+                  className="w-full h-auto block transition-all duration-700 group-hover:scale-105 opacity-0" 
+                />
               </div>
               <div className="mt-3 px-1">
                 <div className="flex items-center justify-between mb-2">
@@ -171,13 +197,12 @@ export default function GalleryPage() {
                   <span className="text-[10px] text-slate-400 tracking-wider uppercase font-light">by {post.userName}</span>
                 </div>
 
-                {/* ✅ タグのデザインを大きく、丸く、クリック可能に修正 */}
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {post.tags?.map((tag, i) => (
                     <Link
                       key={i}
-                      href={`/tag/${tag}`} // 👈 タグページへのURL
-                      onClick={(e) => e.stopPropagation()} // 👈 親のモーダル開くイベントを止める
+                      href={`/tag/${tag}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-medium rounded-full hover:bg-slate-800 hover:text-white transition-all duration-300 shadow-sm border border-slate-200"
                     >
                       #{tag}
@@ -185,7 +210,6 @@ export default function GalleryPage() {
                   ))}
                 </div>
 
-                {/* 💬 コメントを配置（Propagation停止も維持） */}
                 <div onClick={(e) => e.stopPropagation()}>
                   <Comment postId={post.id} />
                 </div>
@@ -195,7 +219,7 @@ export default function GalleryPage() {
         </div>
       )}
 
-      {/* 🎭 フルスクリーン・モーダル（タグ編集専用）はそのまま */}
+      {/* 🎭 フルスクリーン・モーダル（大きな画像はここだけで読み込む） */}
       {currentIndex !== null && (
         <div className="fixed inset-0 z-[100] bg-slate-900/98 backdrop-blur-xl flex flex-col items-center justify-center animate-in fade-in duration-300" onClick={() => setCurrentIndex(null)}>
           <div className="absolute top-8 right-8 flex items-center gap-6" onClick={(e) => e.stopPropagation()}>
@@ -257,7 +281,7 @@ export default function GalleryPage() {
         </div>
       )}
 
-      {/* ナビゲーションはそのまま */}
+      {/* ナビゲーション */}
       <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] max-w-sm bg-white/80 backdrop-blur-md border border-white/20 shadow-2xl rounded-3xl flex justify-around items-center py-4 px-6 z-50">
         <button onClick={() => router.push("/")} className="p-2 text-slate-300 hover:text-slate-800"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></button>
         <button onClick={() => router.push("/upload")} className="bg-slate-800 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center transform -translate-y-2 hover:bg-slate-700 active:scale-95 transition-all"><span className="text-2xl font-light">+</span></button>

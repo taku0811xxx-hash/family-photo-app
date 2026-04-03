@@ -22,7 +22,7 @@ type TagMaster = {
 
 export default function UploadPage() {
   const router = useRouter();
-  const { familyId, loading: authLoading } = useAuth(); 
+  const { familyId, loading: authLoading } = useAuth();
   const [uploadList, setUploadList] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -39,7 +39,7 @@ export default function UploadPage() {
     const fetchTags = async () => {
       const q = query(collection(db, "tags"), where("familyId", "==", familyId));
       const snapshot = await getDocs(q);
-      
+
       const loadedTags: TagMaster[] = [];
       const tagNames = new Set<string>();
 
@@ -134,8 +134,18 @@ export default function UploadPage() {
         setUploadProgress({ current: i + 1, total: uploadList.length });
         const fileName = `${Date.now()}_${item.file.name}`;
 
-        const compressedFile = await imageCompression(item.file, { maxSizeMB: 1, maxWidthOrHeight: 1200 });
-        const thumbnailFile = await imageCompression(item.file, { maxSizeMB: 0.2, maxWidthOrHeight: 400 });
+        // 🖼 メイン画像（拡大表示用）: 1200px は維持でOK
+        const compressedFile = await imageCompression(item.file, {
+          maxSizeMB: 0.8, // 少しだけ下げて 800KB 目安に
+          maxWidthOrHeight: 1200
+        });
+
+        // 🖼 サムネイル（一覧用）: ここを軽量化！
+        const thumbnailFile = await imageCompression(item.file, {
+          maxSizeMB: 0.05,        // 👈 50KB を目標にする
+          maxWidthOrHeight: 300,  // 👈 300px あればスマホ一覧では十分綺麗です
+          useWebWorker: true      // 👈 処理を高速化
+        });
 
         const mainRef = ref(storage, `images/${fileName}`);
         await uploadBytes(mainRef, compressedFile);
@@ -171,7 +181,7 @@ export default function UploadPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 space-y-10">
-        
+
         {/* 📸 写真追加 */}
         <section>
           <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-[2.5rem] bg-white hover:bg-slate-50 transition-all cursor-pointer shadow-sm group">
@@ -246,9 +256,8 @@ export default function UploadPage() {
                     <button
                       key={tag.id}
                       onClick={() => toggleTagForItem(item.id, tag.name)}
-                      className={`px-3 py-1.5 rounded-xl text-[10px] border transition-all ${
-                        item.tags.includes(tag.name) ? "bg-slate-100 text-slate-300 line-through border-slate-200" : "bg-white text-slate-500 border-slate-100 hover:border-slate-300"
-                      }`}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] border transition-all ${item.tags.includes(tag.name) ? "bg-slate-100 text-slate-300 line-through border-slate-200" : "bg-white text-slate-500 border-slate-100 hover:border-slate-300"
+                        }`}
                     >
                       #{tag.name}
                     </button>
@@ -265,9 +274,8 @@ export default function UploadPage() {
             <button
               onClick={handleUploadAll}
               disabled={isUploading}
-              className={`w-full py-5 rounded-[2.2rem] font-bold tracking-[0.3em] text-[10px] uppercase transition-all shadow-xl ${
-                isUploading ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-slate-800 text-white hover:bg-slate-700 active:scale-95"
-              }`}
+              className={`w-full py-5 rounded-[2.2rem] font-bold tracking-[0.3em] text-[10px] uppercase transition-all shadow-xl ${isUploading ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-slate-800 text-white hover:bg-slate-700 active:scale-95"
+                }`}
             >
               {isUploading ? `${uploadProgress.total}枚中 ${uploadProgress.current}枚を保存中...` : `Post ${uploadList.length} Photos`}
             </button>
