@@ -24,24 +24,19 @@ type CommentType = {
 export default function Comment({ postId }: { postId: string }) {
   const [text, setText] = useState("");
   const [comments, setComments] = useState<CommentType[]>([]);
-  const [deleteId, setDeleteId] = useState<string | null>(null); // ←モーダル用
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // 🔥 リアルタイム取得
   useEffect(() => {
     if (!postId) return;
-
     const q = query(
       collection(db, "comments"),
       where("postId", "==", postId),
       orderBy("createdAt", "asc")
     );
-
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list: CommentType[] = [];
-
       snapshot.forEach((d) => {
         const data = d.data();
-
         list.push({
           id: d.id,
           text: data.text || "",
@@ -49,17 +44,13 @@ export default function Comment({ postId }: { postId: string }) {
           userId: data.userId || "",
         });
       });
-
       setComments(list);
     });
-
     return () => unsubscribe();
   }, [postId]);
 
-  // 送信
   const handleSend = async () => {
     if (!text.trim()) return;
-
     await addDoc(collection(db, "comments"), {
       postId,
       text,
@@ -67,79 +58,78 @@ export default function Comment({ postId }: { postId: string }) {
       userId: auth.currentUser?.uid || "",
       createdAt: serverTimestamp(),
     });
-
     setText("");
   };
 
-  // 削除確定
   const handleDelete = async () => {
     if (!deleteId) return;
-
     await deleteDoc(doc(db, "comments", deleteId));
     setDeleteId(null);
   };
 
   return (
-    <div style={{ marginTop: 10 }}>
-      {/* コメント一覧 */}
-      <div style={{ marginBottom: 10 }}>
+    <div style={{ marginTop: 8 }}>
+      {/* 💬 コメント一覧：背景を白に近く、文字を小さく */}
+      <div style={{ marginBottom: 8 }}>
         {comments.map((c) => (
           <div
             key={c.id}
             style={{
-              fontSize: 12,
-              marginBottom: 6,
-              background: "#f5f5f5",
-              padding: "6px 8px",
-              borderRadius: 8,
+              fontSize: 10, // 👈 12から10へ
+              marginBottom: 4,
+              background: "#f9f9f9",
+              padding: "4px 8px", // 👈 余白を削る
+              borderRadius: 6,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              border: "1px solid #f0f0f0"
             }}
           >
-            <div>
-              <b>{c.userName}</b>: {c.text}
+            <div style={{ color: "#666" }}>
+              <b style={{ color: "#333" }}>{c.userName}</b> {c.text}
             </div>
 
-            {/* 自分だけ削除 */}
             {c.userId === auth.currentUser?.uid && (
               <span
                 onClick={(e) => {
                   e.stopPropagation();
-                  setDeleteId(c.id); // ←ここでモーダル開く
+                  setDeleteId(c.id);
                 }}
                 style={{
                   marginLeft: 8,
                   cursor: "pointer",
-                  color: "#999",
-                  fontSize: 12,
+                  color: "#ccc",
+                  fontSize: 10,
                 }}
               >
-                🗑
+                ×
               </span>
             )}
           </div>
         ))}
       </div>
 
-      {/* 入力エリア */}
+      {/* ⌨️ 入力エリア：高さを抑えてコンパクトに */}
       <div
-        style={{ display: "flex", gap: 6 }}
+        style={{ display: "flex", gap: 4 }}
         onClick={(e) => e.stopPropagation()}
       >
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="コメントを書く..."
+          placeholder="コメント..."
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSend();
           }}
           style={{
             flex: 1,
-            padding: "8px 10px",
-            borderRadius: 8,
-            border: "1px solid #ddd",
+            padding: "5px 10px", // 👈 8から5へ
+            borderRadius: 10,
+            border: "1px solid #eee",
             outline: "none",
+            fontSize: 10, // 👈 入力文字も小さく
+            background: "#fff",
             cursor: "text",
           }}
         />
@@ -147,26 +137,22 @@ export default function Comment({ postId }: { postId: string }) {
         <button
           onClick={handleSend}
           style={{
-            padding: "8px 12px",
-            borderRadius: 8,
+            padding: "5px 12px", // 👈 8から5へ
+            borderRadius: 10,
             border: "none",
-            background: "#ff8fb1",
+            background: "#444", // 👈 ピンクから落ち着いたグレーに変更（お好みで）
             color: "#fff",
+            fontSize: 10, // 👈 ボタン文字も小さく
+            fontWeight: "bold",
             cursor: "pointer",
             transition: "0.2s",
           }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.opacity = "0.8")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.opacity = "1")
-          }
         >
           送信
         </button>
       </div>
 
-      {/* 🔥 カスタム削除モーダル */}
+      {/* 🗑 削除モーダル (変更なし) */}
       {deleteId && (
         <div
           onClick={() => setDeleteId(null)}
@@ -176,7 +162,7 @@ export default function Comment({ postId }: { postId: string }) {
             left: 0,
             width: "100%",
             height: "100%",
-            background: "rgba(0,0,0,0.4)",
+            background: "rgba(0,0,0,0.5)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -188,39 +174,42 @@ export default function Comment({ postId }: { postId: string }) {
             style={{
               background: "#fff",
               padding: 20,
-              borderRadius: 12,
-              width: 280,
+              borderRadius: 24,
+              width: 260,
               textAlign: "center",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
             }}
           >
-            <p style={{ marginBottom: 20 }}>
-              このコメントを削除しますか？
+            <p style={{ marginBottom: 20, fontSize: 13, color: "#333" }}>
+              コメントを削除しますか？
             </p>
-
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => setDeleteId(null)}
                 style={{
                   flex: 1,
-                  padding: 8,
-                  borderRadius: 8,
-                  border: "1px solid #ddd",
+                  padding: "10px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: "#f5f5f5",
+                  color: "#999",
+                  fontSize: 11,
                   cursor: "pointer",
                 }}
               >
-                キャンセル
+                やめる
               </button>
-
               <button
                 onClick={handleDelete}
                 style={{
                   flex: 1,
-                  padding: 8,
-                  borderRadius: 8,
+                  padding: "10px",
+                  borderRadius: 12,
                   border: "none",
                   background: "#ff4d6d",
                   color: "#fff",
+                  fontSize: 11,
+                  fontWeight: "bold",
                   cursor: "pointer",
                 }}
               >

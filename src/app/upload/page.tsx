@@ -214,15 +214,17 @@ export default function UploadPage() {
               Existing Tags
               <span className="text-[9px] font-normal lowercase opacity-40">Click tag to view / × to delete</span>
             </h3>
+            {/* 🏷 タグ管理セクション内の修正 */}
             <div className="flex flex-wrap gap-2">
               {existingTags.map((tag) => (
                 <div key={tag.id} className="relative group/tag">
-                  <button
-                    onClick={() => router.push(`/tag/${tag.name}`)}
-                    className="pl-4 pr-9 py-2 rounded-full text-[11px] bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-800 hover:text-white transition-all duration-300"
+                  {/* 修正ポイント：onClickを削除し、cursor-defaultを追加 */}
+                  <div
+                    className="pl-4 pr-9 py-2 rounded-full text-[11px] bg-slate-50 text-slate-500 border border-slate-100 cursor-default transition-all duration-300"
                   >
                     #{tag.name}
-                  </button>
+                  </div>
+
                   {!tag.id.startsWith("default-") && (
                     <button
                       onClick={(e) => confirmDeleteTag(e, tag)}

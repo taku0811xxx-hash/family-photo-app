@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../../lib/firebase";
-import { collection, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, limit } from "firebase/firestore"; // ✅ limitを追加
+import { collection, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, limit } from "firebase/firestore";
 import { useAuth } from "../../lib/contexts/AuthContext";
 import Comment from "../components/Comment"; 
 import Like from "../components/Like";
@@ -24,7 +24,6 @@ export default function GalleryPage() {
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  // 編集用ステート
   const [isEditing, setIsEditing] = useState(false);
   const [editTags, setEditTags] = useState("");
   const [allTags, setAllTags] = useState<string[]>([]);
@@ -35,7 +34,6 @@ export default function GalleryPage() {
 
     const fetchData = async () => {
       try {
-        // ✅ 最初は最新の24枚に絞ることで初期表示を高速化（枚数は調整可）
         const q = query(
           collection(db, "posts"), 
           where("familyId", "==", familyId), 
@@ -137,7 +135,6 @@ export default function GalleryPage() {
     }
   };
 
-  // ✅ 1. スケルトン表示（読み込み中のプレースホルダー）
   if (authLoading || isDataLoading) {
     return (
       <div className="min-h-screen bg-[#fafafa] pb-32">
@@ -146,11 +143,10 @@ export default function GalleryPage() {
           <div className="w-32 h-6 bg-slate-200 rounded"></div>
           <div className="w-12"></div>
         </header>
-        <div className="px-4 columns-2 md:columns-3 lg:columns-4 gap-4 space-y-6">
+        <div className="px-4 columns-3 gap-2 space-y-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="break-inside-avoid bg-white rounded-2xl border border-slate-100 p-4 space-y-4">
-              <div className="w-full aspect-[3/4] bg-slate-100 animate-pulse rounded-xl"></div>
-              <div className="h-3 w-1/2 bg-slate-50 animate-pulse rounded"></div>
+            <div key={i} className="break-inside-avoid bg-white rounded-xl border border-slate-100 p-2">
+              <div className="w-full aspect-square bg-slate-100 animate-pulse rounded-lg"></div>
             </div>
           ))}
         </div>
@@ -177,40 +173,43 @@ export default function GalleryPage() {
           <button onClick={() => router.push("/upload")} className="px-10 py-4 bg-slate-800 text-white rounded-full text-[10px] font-bold tracking-[0.3em] uppercase">Upload First Photo</button>
         </div>
       ) : (
-        <div className="px-4 columns-2 md:columns-3 lg:columns-4 gap-4 space-y-6">
+        <div className="px-4 columns-3 md:columns-4 lg:columns-5 gap-2 space-y-4">
           {images.map((post, index) => (
             <div key={post.id} className="break-inside-avoid group cursor-pointer" onClick={() => openModal(index)}>
-              <div className="relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-500 group-hover:shadow-xl group-hover:-translate-y-1 border border-slate-100 min-h-[100px]">
-                {/* ✅ 2. 画像の最適化とフェードインアニメーション */}
+              <div className="relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-500 border border-slate-100 min-h-[60px]">
                 <img 
                   src={post.thumbnailUrl} 
                   alt="" 
                   loading="lazy" 
-                  decoding="async"
+                  className="w-full h-auto block transition-all duration-700 opacity-0" 
                   onLoad={(e) => (e.currentTarget.style.opacity = "1")}
-                  className="w-full h-auto block transition-all duration-700 group-hover:scale-105 opacity-0" 
                 />
               </div>
-              <div className="mt-3 px-1">
-                <div className="flex items-center justify-between mb-2">
-                  <div onClick={(e) => e.stopPropagation()} className="transform scale-90 -ml-1"><Like postId={post.id} /></div>
-                  <span className="text-[10px] text-slate-400 tracking-wider uppercase font-light">by {post.userName}</span>
+
+              <div className="mt-2 px-0.5">
+                <div className="flex items-center justify-between mb-1">
+                  <div onClick={(e) => e.stopPropagation()} className="transform scale-75 -ml-2 origin-left">
+                    <Like postId={post.id} />
+                  </div>
+                  <span className="text-[8px] text-slate-400 tracking-tighter uppercase font-light truncate max-w-[50%]">
+                    {post.userName}
+                  </span>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 mb-3">
+                <div className="flex flex-wrap gap-1 mb-2">
                   {post.tags?.map((tag, i) => (
                     <Link
                       key={i}
                       href={`/tag/${tag}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-medium rounded-full hover:bg-slate-800 hover:text-white transition-all duration-300 shadow-sm border border-slate-200"
+                      className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[8px] font-medium rounded-md hover:bg-slate-800 hover:text-white transition-all border border-slate-200"
                     >
                       #{tag}
                     </Link>
                   ))}
                 </div>
 
-                <div onClick={(e) => e.stopPropagation()}>
+                <div onClick={(e) => e.stopPropagation()} className="transform scale-90 origin-top-left opacity-90">
                   <Comment postId={post.id} />
                 </div>
               </div>
@@ -219,7 +218,6 @@ export default function GalleryPage() {
         </div>
       )}
 
-      {/* 🎭 フルスクリーン・モーダル（大きな画像はここだけで読み込む） */}
       {currentIndex !== null && (
         <div className="fixed inset-0 z-[100] bg-slate-900/98 backdrop-blur-xl flex flex-col items-center justify-center animate-in fade-in duration-300" onClick={() => setCurrentIndex(null)}>
           <div className="absolute top-8 right-8 flex items-center gap-6" onClick={(e) => e.stopPropagation()}>
@@ -281,7 +279,6 @@ export default function GalleryPage() {
         </div>
       )}
 
-      {/* ナビゲーション */}
       <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] max-w-sm bg-white/80 backdrop-blur-md border border-white/20 shadow-2xl rounded-3xl flex justify-around items-center py-4 px-6 z-50">
         <button onClick={() => router.push("/")} className="p-2 text-slate-300 hover:text-slate-800"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></button>
         <button onClick={() => router.push("/upload")} className="bg-slate-800 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center transform -translate-y-2 hover:bg-slate-700 active:scale-95 transition-all"><span className="text-2xl font-light">+</span></button>
