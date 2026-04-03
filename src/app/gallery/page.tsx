@@ -173,9 +173,11 @@ export default function GalleryPage() {
           <button onClick={() => router.push("/upload")} className="px-10 py-4 bg-slate-800 text-white rounded-full text-[10px] font-bold tracking-[0.3em] uppercase">Upload First Photo</button>
         </div>
       ) : (
+        /* ✅ grid-cols-3 で横並びの高さを統一 */
         <div className="px-2 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-2 gap-y-6">
           {images.map((post, index) => (
             <div key={post.id} className="flex flex-col group cursor-pointer relative" onClick={() => openModal(index)}>
+              {/* 🖼 写真部分：aspect-[3/4] で比率を完全に固定 */}
               <div className="relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-500 border border-slate-100 aspect-[3/4]">
                 <img 
                   src={post.thumbnailUrl} 
@@ -186,11 +188,15 @@ export default function GalleryPage() {
                 />
               </div>
 
+              {/* 📝 情報エリア */}
               <div className="mt-2 px-0.5">
                 <div className="flex items-center justify-between mb-1">
+                  {/* ✅ いいね：サイズを大きくし、z-30で最前面へ、stopPropagationを強化 */}
                   <div 
-                    onClick={(e) => e.stopPropagation()} 
-                    className="relative z-20 transform scale-75 -ml-2 origin-left active:scale-95 transition-transform"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }} 
+                    className="relative z-30 transform scale-[1.3] -ml-0.5 origin-left active:scale-[1.5] transition-all pointer-events-auto"
                   >
                     <Like postId={post.id} />
                   </div>
@@ -199,7 +205,8 @@ export default function GalleryPage() {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-1 mb-2 relative z-20">
+                {/* タグ */}
+                <div className="flex flex-wrap gap-1 mb-2 relative z-30">
                   {post.tags?.map((tag, i) => (
                     <Link
                       key={i}
@@ -212,7 +219,8 @@ export default function GalleryPage() {
                   ))}
                 </div>
 
-                <div onClick={(e) => e.stopPropagation()} className="relative z-20 transform scale-90 origin-top-left opacity-90">
+                {/* コメント */}
+                <div onClick={(e) => e.stopPropagation()} className="relative z-30 transform scale-90 origin-top-left opacity-90">
                   <Comment postId={post.id} />
                 </div>
               </div>
@@ -221,6 +229,7 @@ export default function GalleryPage() {
         </div>
       )}
 
+      {/* モーダル */}
       {currentIndex !== null && (
         <div className="fixed inset-0 z-[100] bg-slate-900/98 backdrop-blur-xl flex flex-col items-center justify-center animate-in fade-in duration-300" onClick={() => setCurrentIndex(null)}>
           <div className="absolute top-8 right-8 flex items-center gap-6" onClick={(e) => e.stopPropagation()}>
@@ -271,7 +280,6 @@ export default function GalleryPage() {
             ) : (
               <div className="space-y-3">
                 <div className="flex flex-wrap justify-center gap-3">
-                  {/* ✅ ここを修正：不要な #tag を消し、閉じタグを修正しました */}
                   {images[currentIndex].tags?.map((tag, i) => (
                     <span key={i} className="text-[10px] text-white/60">#{tag}</span>
                   ))}
@@ -283,6 +291,7 @@ export default function GalleryPage() {
         </div>
       )}
 
+      {/* ナビゲーション */}
       <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] max-w-sm bg-white/80 backdrop-blur-md border border-white/20 shadow-2xl rounded-3xl flex justify-around items-center py-4 px-6 z-50">
         <button onClick={() => router.push("/")} className="p-2 text-slate-300 hover:text-slate-800"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg></button>
         <button onClick={() => router.push("/upload")} className="bg-slate-800 text-white w-12 h-12 rounded-2xl shadow-lg flex items-center justify-center transform -translate-y-2 hover:bg-slate-700 active:scale-95 transition-all"><span className="text-2xl font-light">+</span></button>
