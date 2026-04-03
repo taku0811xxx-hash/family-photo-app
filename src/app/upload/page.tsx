@@ -5,8 +5,8 @@ import { storage, db, auth } from "../../lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
 import imageCompression from "browser-image-compression";
-import { FAMILY_ID } from "../../lib/constants";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../lib/contexts/AuthContext";
 
 type UploadItem = {
   id: string;
@@ -22,6 +22,7 @@ type TagMaster = {
 
 export default function UploadPage() {
   const router = useRouter();
+  const { familyId, loading: authLoading } = useAuth(); 
   const [uploadList, setUploadList] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -34,8 +35,9 @@ export default function UploadPage() {
 
   // 1. 既存タグを "tags" コレクションから取得
   useEffect(() => {
+    if (authLoading || !familyId) return;
     const fetchTags = async () => {
-      const q = query(collection(db, "tags"), where("familyId", "==", FAMILY_ID));
+      const q = query(collection(db, "tags"), where("familyId", "==", familyId));
       const snapshot = await getDocs(q);
       
       const loadedTags: TagMaster[] = [];
@@ -77,7 +79,7 @@ export default function UploadPage() {
     try {
       const docRef = await addDoc(collection(db, "tags"), {
         name: name,
-        familyId: FAMILY_ID,
+        familyId: familyId,
         createdAt: serverTimestamp(),
       });
       setExistingTags((prev) => [...prev, { id: docRef.id, name }]);
@@ -148,7 +150,7 @@ export default function UploadPage() {
           thumbnailUrl: thumbUrl,
           createdAt: serverTimestamp(),
           tags: item.tags,
-          familyId: FAMILY_ID,
+          familyId: familyId,
           userName: auth.currentUser?.displayName || "名無し",
         });
       }
