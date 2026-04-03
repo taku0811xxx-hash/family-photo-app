@@ -100,10 +100,9 @@ export default function Like({ postId }: { postId: string }) {
       <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
         <span
           style={{
-            fontSize: 18, // 👈 28から18に小さくしました（標準的なアイコンサイズ）
+            fontSize: 18, 
             color: liked ? "#ff4d94" : "#ccc",
             transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-            // 👈 アニメーション時の膨らみも少し控えめに（1.5 → 1.3）
             transform: isAnimate ? "scale(1.3)" : liked ? "scale(1.1)" : "scale(1)", 
             display: "inline-block",
             lineHeight: 1
@@ -117,7 +116,7 @@ export default function Like({ postId }: { postId: string }) {
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            border: "1.5px solid #ff4d94", // 👈 線も少し細く
+            border: "1.5px solid #ff4d94", 
             animation: "ping 0.6s cubic-bezier(0, 0, 0.2, 1) forwards",
             opacity: 0
           }} />
@@ -126,7 +125,7 @@ export default function Like({ postId }: { postId: string }) {
 
       <span style={{ 
         marginLeft: 6, 
-        fontSize: 11, // 👈 数字も少し小さくしてバランスを調整
+        fontSize: 11, 
         fontWeight: "bold",
         color: liked ? "#ff4d94" : "#666",
         minWidth: "10px"
@@ -134,8 +133,6 @@ export default function Like({ postId }: { postId: string }) {
         {count > 0 ? count : ""}
       </span>
 
-      {/* 以下、style jsxなどはそのまま */}
-// ...
 
       <style jsx>{`
         @keyframes ping {
