@@ -91,20 +91,20 @@ export default function Like({ postId }: { postId: string }) {
         cursor: "pointer",
         display: "flex",
         alignItems: "center",
-        padding: "4px 8px", // クリック範囲を広げる
+        padding: "4px 6px", // 少しスリムに
         userSelect: "none",
         position: "relative",
-        zIndex: 50 // 他の要素より確実に前に出す
+        zIndex: 50
       }}
     >
-      {/* ハート部分 */}
       <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
         <span
           style={{
-            fontSize: 28, // 前回の1.5倍くらいのサイズ感
+            fontSize: 18, // 👈 28から18に小さくしました（標準的なアイコンサイズ）
             color: liked ? "#ff4d94" : "#ccc",
             transition: "all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-            transform: isAnimate ? "scale(1.5)" : liked ? "scale(1.1)" : "scale(1)",
+            // 👈 アニメーション時の膨らみも少し控えめに（1.5 → 1.3）
+            transform: isAnimate ? "scale(1.3)" : liked ? "scale(1.1)" : "scale(1)", 
             display: "inline-block",
             lineHeight: 1
           }}
@@ -112,29 +112,30 @@ export default function Like({ postId }: { postId: string }) {
           {liked ? "♥" : "♡"}
         </span>
         
-        {/* アニメーション用のエフェクト（キラッとする感じ） */}
         {isAnimate && (
           <span style={{
             position: "absolute",
             inset: 0,
             borderRadius: "50%",
-            border: "2px solid #ff4d94",
+            border: "1.5px solid #ff4d94", // 👈 線も少し細く
             animation: "ping 0.6s cubic-bezier(0, 0, 0.2, 1) forwards",
             opacity: 0
           }} />
         )}
       </div>
 
-      {/* カウント数 */}
       <span style={{ 
-        marginLeft: 8, 
-        fontSize: 14, 
+        marginLeft: 6, 
+        fontSize: 11, // 👈 数字も少し小さくしてバランスを調整
         fontWeight: "bold",
         color: liked ? "#ff4d94" : "#666",
-        minWidth: "12px"
+        minWidth: "10px"
       }}>
         {count > 0 ? count : ""}
       </span>
+
+      {/* 以下、style jsxなどはそのまま */}
+// ...
 
       <style jsx>{`
         @keyframes ping {
