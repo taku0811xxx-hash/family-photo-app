@@ -143,10 +143,10 @@ export default function GalleryPage() {
           <div className="w-32 h-6 bg-slate-200 rounded"></div>
           <div className="w-12"></div>
         </header>
-        <div className="px-4 columns-3 gap-2 space-y-4">
+        <div className="px-4 grid grid-cols-3 md:grid-cols-4 gap-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="break-inside-avoid bg-white rounded-xl border border-slate-100 p-2">
-              <div className="w-full aspect-square bg-slate-100 animate-pulse rounded-lg"></div>
+            <div key={i} className="bg-white rounded-xl border border-slate-100 p-2">
+              <div className="w-full aspect-[3/4] bg-slate-100 animate-pulse rounded-lg"></div>
             </div>
           ))}
         </div>
@@ -173,19 +173,22 @@ export default function GalleryPage() {
           <button onClick={() => router.push("/upload")} className="px-10 py-4 bg-slate-800 text-white rounded-full text-[10px] font-bold tracking-[0.3em] uppercase">Upload First Photo</button>
         </div>
       ) : (
-        <div className="px-4 columns-3 md:columns-4 lg:columns-5 gap-2 space-y-4">
+        /* ✅ columns-3 から grid-cols-3 に変更して、高さを同期させる */
+        <div className="px-2 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-2 gap-y-6">
           {images.map((post, index) => (
-            <div key={post.id} className="break-inside-avoid group cursor-pointer" onClick={() => openModal(index)}>
-              <div className="relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-500 border border-slate-100 min-h-[60px]">
+            <div key={post.id} className="flex flex-col group cursor-pointer" onClick={() => openModal(index)}>
+              {/* 🖼 写真部分：aspect-[3/4] で比率を固定し、object-cover で枠いっぱいに表示 */}
+              <div className="relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-500 border border-slate-100 aspect-[3/4]">
                 <img 
                   src={post.thumbnailUrl} 
                   alt="" 
                   loading="lazy" 
-                  className="w-full h-auto block transition-all duration-700 opacity-0" 
+                  className="w-full h-full object-cover block transition-all duration-700 opacity-0" 
                   onLoad={(e) => (e.currentTarget.style.opacity = "1")}
                 />
               </div>
 
+              {/* 📝 情報エリア：ここも位置が揃うようになります */}
               <div className="mt-2 px-0.5">
                 <div className="flex items-center justify-between mb-1">
                   <div onClick={(e) => e.stopPropagation()} className="transform scale-75 -ml-2 origin-left">
@@ -218,6 +221,7 @@ export default function GalleryPage() {
         </div>
       )}
 
+      {/* モーダル・ナビゲーション部分は変更なし */}
       {currentIndex !== null && (
         <div className="fixed inset-0 z-[100] bg-slate-900/98 backdrop-blur-xl flex flex-col items-center justify-center animate-in fade-in duration-300" onClick={() => setCurrentIndex(null)}>
           <div className="absolute top-8 right-8 flex items-center gap-6" onClick={(e) => e.stopPropagation()}>
