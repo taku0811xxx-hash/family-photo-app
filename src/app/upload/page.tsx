@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { storage, db, auth } from "../../lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, where, deleteDoc, doc, setDoc } from "firebase/firestore";
 import imageCompression from "browser-image-compression";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../lib/contexts/AuthContext";
+import { v4 as uuidv4 } from "uuid";
 
 type UploadItem = {
   id: string;
@@ -119,54 +120,78 @@ export default function UploadPage() {
         if (item.id !== itemId) return item;
         const newTags = item.tags.includes(tagName)
           ? item.tags.filter((t) => t !== tagName)
-          : item.tags.length < 10 ? [...item.tags, tagName] : item.tags;
+          : [...item.tags, tagName]; // 制限なしで追加
         return { ...item, tags: newTags };
       })
     );
   };
 
+
+
   const handleUploadAll = async () => {
     if (uploadList.length === 0) return;
+
     setIsUploading(true);
+
     try {
-      for (let i = 0; i < uploadList.length; i++) {
-        const item = uploadList[i];
-        setUploadProgress({ current: i + 1, total: uploadList.length });
-        const fileName = `${Date.now()}_${item.file.name}`;
+      let completed = 0;
 
-        // 🖼 メイン画像（拡大表示用）: 1200px は維持でOK
-        const compressedFile = await imageCompression(item.file, {
-          maxSizeMB: 0.8, // 少しだけ下げて 800KB 目安に
-          maxWidthOrHeight: 1200
-        });
+      await Promise.all(
+        uploadList.map(async (item) => {
+          // ✨ 先にUUIDを生成して固定します
+          const customId = uuidv4();
+          const fileName = `${customId}.jpg`;
 
-        // 🖼 サムネイル（一覧用）: ここを軽量化！
-        const thumbnailFile = await imageCompression(item.file, {
-          maxSizeMB: 0.05,        // 👈 50KB を目標にする
-          maxWidthOrHeight: 300,  // 👈 300px あればスマホ一覧では十分綺麗です
-          useWebWorker: true      // 👈 処理を高速化
-        });
+          // 🖼 メイン画像圧縮 (1200px)
+          const compressedFile = await imageCompression(item.file, {
+            maxSizeMB: 0.8,
+            maxWidthOrHeight: 1200
+          });
 
-        const mainRef = ref(storage, `images/${fileName}`);
-        await uploadBytes(mainRef, compressedFile);
-        const mainUrl = await getDownloadURL(mainRef);
+          // 🖼 サムネイル圧縮 (300px)
+          const thumbnailFile = await imageCompression(item.file, {
+            maxSizeMB: 0.05,
+            maxWidthOrHeight: 300,
+            useWebWorker: true
+          });
 
-        const thumbRef = ref(storage, `thumbs/${fileName}`);
-        await uploadBytes(thumbRef, thumbnailFile);
-        const thumbUrl = await getDownloadURL(thumbRef);
+          // 🔼 Storageへアップロード
+          // ファイル名をUUIDにすることで、URLからIDを逆引きしやすくなります
+          const mainRef = ref(storage, `images/${fileName}`);
+          await uploadBytes(mainRef, compressedFile);
+          const mainUrl = await getDownloadURL(mainRef);
 
-        await addDoc(collection(db, "posts"), {
-          imageUrl: mainUrl,
-          thumbnailUrl: thumbUrl,
-          createdAt: serverTimestamp(),
-          tags: item.tags,
-          familyId: familyId,
-          userName: auth.currentUser?.displayName || "名無し",
-        });
-      }
+          const thumbRef = ref(storage, `thumbs/${fileName}`);
+          await uploadBytes(thumbRef, thumbnailFile);
+          const thumbUrl = await getDownloadURL(thumbRef);
+
+          // 📝 Firestoreへ保存
+          // addDoc(自動ID) ではなく setDoc(指定ID) を使います
+          await setDoc(doc(db, "posts", customId), {
+            id: customId, // ドキュメントの中身にもIDを持たせておくと便利です
+            imageUrl: mainUrl,
+            thumbnailUrl: thumbUrl,
+            createdAt: serverTimestamp(),
+            tags: item.tags,
+            familyId: familyId,
+            userName: auth.currentUser?.displayName || "名無し",
+          });
+
+          // 🔥 進捗更新
+          completed++;
+          setUploadProgress({
+            current: completed,
+            total: uploadList.length
+          });
+        })
+      );
+
+      // 全て完了したらギャラリーへ
       router.push("/gallery");
+
     } catch (error) {
-      console.error(error);
+      console.error("Upload Error:", error);
+      alert("アップロード中にエラーが発生しました。");
     } finally {
       setIsUploading(false);
     }
@@ -303,6 +328,33 @@ export default function UploadPage() {
                 キャンセル
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* 📦 アップロード進捗ポップアップ */}
+      {isUploading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-500" />
+          <div className="relative bg-white w-full max-w-xs rounded-[3rem] p-10 shadow-2xl text-center animate-in zoom-in-95 duration-300">
+            {/* ぐるぐる回るローダー */}
+            <div className="w-20 h-20 border-4 border-slate-100 border-t-slate-800 rounded-full animate-spin mx-auto mb-8" />
+
+            <h3 className="text-slate-800 font-bold text-lg mb-2 tracking-wider">Uploading...</h3>
+            <p className="text-slate-400 text-[10px] leading-relaxed mb-6 tracking-[0.2em] uppercase">
+              {uploadProgress.total}枚中 {uploadProgress.current}枚を処理中
+            </p>
+
+            {/* プログレスバー */}
+            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-slate-800 transition-all duration-500 ease-out"
+                style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+              />
+            </div>
+
+            <p className="mt-8 text-[9px] text-slate-300 italic">
+              Please don't close the browser.
+            </p>
           </div>
         </div>
       )}

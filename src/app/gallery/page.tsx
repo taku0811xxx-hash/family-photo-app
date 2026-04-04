@@ -2,12 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { db } from "../../lib/firebase";
-import { collection, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, limit } from "firebase/firestore";
+import {
+  collection, getDocs, query, where, orderBy, doc,
+  updateDoc, deleteDoc, addDoc, serverTimestamp, limit,
+  startAfter // 🔥 これを追加
+} from "firebase/firestore";
 import { useAuth } from "../../lib/contexts/AuthContext";
-import Comment from "../components/Comment"; 
+import Comment from "../components/Comment";
 import Like from "../components/Like";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { deleteObject, ref } from "firebase/storage";
+import { storage } from "../../lib/firebase";
+
 
 type Post = {
   id: string;
@@ -20,7 +27,11 @@ type Post = {
 export default function GalleryPage() {
   const router = useRouter();
   const { familyId, loading: authLoading } = useAuth();
+  // --- ここから差し替え ---
   const [images, setImages] = useState<Post[]>([]);
+  const [lastDoc, setLastDoc] = useState<any>(null); // ✨ 次回読み込みの開始地点
+  const [isMoreLoading, setIsMoreLoading] = useState(false); // ✨ 追加読み込み中フラグ
+  const [hasMore, setHasMore] = useState(true); // ✨ まだ続きがあるか
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
@@ -29,51 +40,92 @@ export default function GalleryPage() {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [newTagInput, setNewTagInput] = useState("");
 
-  useEffect(() => {
+  // 📸 データ取得ロジック（初回 & 追加読み込み共通）
+  const fetchData = async (isFirst = true) => {
     if (authLoading || !familyId) return;
 
-    const fetchData = async () => {
-      try {
-        const q = query(
-          collection(db, "posts"), 
-          where("familyId", "==", familyId), 
-          orderBy("createdAt", "desc"),
-          limit(24) 
-        );
-        const snapshot = await getDocs(q);
-        const list: Post[] = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          list.push({
-            id: doc.id,
-            imageUrl: data.imageUrl,
-            thumbnailUrl: data.thumbnailUrl || data.imageUrl,
-            tags: data.tags || [],
-            userName: data.userName || "名無し",
-          });
-        });
+    if (isFirst) {
+      setIsDataLoading(true);
+      setHasMore(true);
+    } else {
+      setIsMoreLoading(true);
+    }
+
+    try {
+      let q = query(
+        collection(db, "posts"),
+        where("familyId", "==", familyId),
+        orderBy("createdAt", "desc"),
+        limit(20) // ⚡️ 1回に読み込む枚数
+      );
+
+      // 追加読み込みの場合は、前回の最後のデータの続きから
+      if (!isFirst && lastDoc) {
+        q = query(q, startAfter(lastDoc));
+      }
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        setHasMore(false);
+        if (isFirst) setImages([]);
+        return;
+      }
+
+      const list: Post[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          imageUrl: data.imageUrl,
+          thumbnailUrl: data.thumbnailUrl || data.imageUrl,
+          tags: data.tags || [],
+          userName: data.userName || "名無し",
+        };
+      });
+
+      // 最後のドキュメントを保存
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+
+      if (isFirst) {
         setImages(list);
-      } catch (error) {
-        console.error("Error fetching gallery:", error);
-      } finally {
-        setIsDataLoading(false);
+      } else {
+        setImages(prev => [...prev, ...list]);
       }
-    };
 
-    const fetchAllTags = async () => {
-      try {
-        const q = query(collection(db, "tags"), where("familyId", "==", familyId));
-        const snap = await getDocs(q);
-        const tags = snap.docs.map(doc => doc.data().name);
-        setAllTags(Array.from(new Set([...["旅行", "イベント", "家族", "子供", "記念日"], ...tags])));
-      } catch (error) {
-        console.error("Error fetching tags:", error);
+      // 20枚未満なら「もう次はない」
+      if (snapshot.docs.length < 20) {
+        setHasMore(false);
       }
-    };
 
-    fetchData();
-    fetchAllTags();
+    } catch (error) {
+      console.error("Error fetching gallery:", error);
+    } finally {
+      setIsDataLoading(false);
+      setIsMoreLoading(false);
+    }
+  };
+
+  // タグ一覧の取得
+  const fetchAllTags = async () => {
+    if (!familyId) return;
+    try {
+      const q = query(collection(db, "tags"), where("familyId", "==", familyId));
+      const snap = await getDocs(q);
+      const tags = snap.docs.map(doc => doc.data().name);
+      setAllTags(Array.from(new Set([...["旅行", "イベント", "家族", "子供", "記念日"], ...tags])));
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+    }
+  };
+
+  // 画面が開いた時に実行
+  useEffect(() => {
+    if (!authLoading && familyId) {
+      fetchData(true);
+      fetchAllTags();
+    }
   }, [familyId, authLoading]);
+  // --- ここまで差し替え ---
 
   const openModal = (index: number) => {
     setCurrentIndex(index);
@@ -122,13 +174,36 @@ export default function GalleryPage() {
     }
   };
 
+
+  // 追加：URLからパスを取得する関数
+  const getPathFromUrl = (url: string) => {
+    const decoded = decodeURIComponent(url);
+    const match = decoded.match(/\/o\/(.*?)\?/);
+    return match ? match[1] : null;
+  };
+
   const handleDeletePost = async () => {
     if (currentIndex === null) return;
     if (!confirm("この写真を削除してもよろしいですか？")) return;
-    const postId = images[currentIndex].id;
+
+    const post = images[currentIndex];
+
     try {
-      await deleteDoc(doc(db, "posts", postId));
-      setImages(prev => prev.filter(img => img.id !== postId));
+      // 🔥 Storage削除
+      const imagePath = getPathFromUrl(post.imageUrl);
+      const thumbPath = getPathFromUrl(post.thumbnailUrl || "");
+
+      if (imagePath) {
+        await deleteObject(ref(storage, imagePath));
+      }
+      if (thumbPath) {
+        await deleteObject(ref(storage, thumbPath));
+      }
+
+      // 🔥 Firestore削除
+      await deleteDoc(doc(db, "posts", post.id));
+
+      setImages(prev => prev.filter(img => img.id !== post.id));
       setCurrentIndex(null);
     } catch (e) {
       alert("削除に失敗しました");
@@ -173,17 +248,17 @@ export default function GalleryPage() {
           <button onClick={() => router.push("/upload")} className="px-10 py-4 bg-slate-800 text-white rounded-full text-[10px] font-bold tracking-[0.3em] uppercase">Upload First Photo</button>
         </div>
       ) : (
-        /* ✅ grid-cols-3 で横並びの高さを統一 */
-        <div className="px-2 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-2 gap-y-6">
+
+        <div className="px-1 grid grid-cols-5 md:grid-cols-7 lg:grid-cols-8 gap-x-1 gap-y-3">
           {images.map((post, index) => (
             <div key={post.id} className="flex flex-col group cursor-pointer relative" onClick={() => openModal(index)}>
               {/* 🖼 写真部分：aspect-[3/4] で比率を完全に固定 */}
               <div className="relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-500 border border-slate-100 aspect-[3/4]">
-                <img 
-                  src={post.thumbnailUrl} 
-                  alt="" 
-                  loading="lazy" 
-                  className="w-full h-full object-cover block transition-all duration-700 opacity-0" 
+                <img
+                  src={post.thumbnailUrl}
+                  alt=""
+                  loading="lazy"
+                  className="w-full h-full object-cover block transition-all duration-700 opacity-0"
                   onLoad={(e) => (e.currentTarget.style.opacity = "1")}
                 />
               </div>
@@ -192,10 +267,10 @@ export default function GalleryPage() {
               <div className="mt-2 px-0.5">
                 <div className="flex items-center justify-between mb-1">
                   {/* ✅ いいね：サイズを大きくし、z-30で最前面へ、stopPropagationを強化 */}
-                  <div 
+                  <div
                     onClick={(e) => {
                       e.stopPropagation();
-                    }} 
+                    }}
                     className="relative z-30 transform scale-[1.3] -ml-0.5 origin-left active:scale-[1.5] transition-all pointer-events-auto"
                   >
                     <Like postId={post.id} />
@@ -226,6 +301,19 @@ export default function GalleryPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {hasMore && images.length > 0 && (
+        <div className="flex justify-center mt-12 mb-20">
+          <button
+            onClick={() => fetchData(false)}
+            disabled={isMoreLoading}
+            className={`px-10 py-4 bg-white border border-slate-200 text-slate-500 rounded-full text-[10px] font-bold tracking-[0.3em] uppercase transition-all shadow-sm active:scale-95 ${isMoreLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-50 hover:border-slate-300"
+              }`}
+          >
+            {isMoreLoading ? "Loading..." : "Load More"}
+          </button>
         </div>
       )}
 
