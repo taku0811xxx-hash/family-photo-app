@@ -87,7 +87,7 @@ export default function Comment({ postId }: { postId: string }) {
   };
 
   return (
-    <div className="transform scale-[0.6] md:scale-100 origin-top-left" style={{ marginTop: 4 }}>
+    <div className="transform scale-[0.4] md:scale-100 origin-top-left" style={{ marginTop: 4 }}>
 
       {/* 💬 コメント一覧 */}
       <div style={{ marginBottom: 4 }}>
