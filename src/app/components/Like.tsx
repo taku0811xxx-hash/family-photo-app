@@ -76,7 +76,12 @@ export default function Like({ postId }: { postId: string }) {
 
   // --- 以下、表示部分は変更なし ---
   return (
-    <div onClick={handleLike} style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "4px 6px", userSelect: "none", position: "relative", zIndex: 50 }}>
+    <div 
+      onClick={handleLike} 
+      /* classNameを追加：スマホでは全体のサイズを縮小、PC(md)で等倍に戻す */
+      className="transform scale-[0.6] md:scale-100 origin-left"
+      style={{ cursor: "pointer", display: "flex", alignItems: "center", padding: "2px 4px", userSelect: "none", position: "relative", zIndex: 50 }}
+    >
       <style>{`
         @keyframes heart-pop {
           0% { transform: scale(0.7); }
@@ -86,7 +91,8 @@ export default function Like({ postId }: { postId: string }) {
       `}</style>
       <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
         <span style={{
-            fontSize: 18,
+            /* 基本サイズを少し下げつつ、アニメーションを維持 */
+            fontSize: 16, 
             color: liked ? "#ff4d94" : "#ccc",
             transition: "all 0.2s ease",
             animation: isAnimate ? "heart-pop 0.4s ease-out" : "none",
@@ -95,7 +101,12 @@ export default function Like({ postId }: { postId: string }) {
           {liked ? "♥" : "♡"}
         </span>
       </div>
-      <span style={{ marginLeft: 6, fontSize: 11, fontWeight: "bold", color: liked ? "#ff4d94" : "#666" }}>
+      <span style={{ 
+        marginLeft: 4, 
+        fontSize: 10, // 数字も少し小さく
+        fontWeight: "bold", 
+        color: liked ? "#ff4d94" : "#666" 
+      }}>
         {count > 0 ? count : ""}
       </span>
     </div>
