@@ -87,31 +87,60 @@ export default function Comment({ postId }: { postId: string }) {
   };
 
   return (
-    <div style={{ marginTop: 8 }}>
+    <div className="transform scale-[0.8] md:scale-100 origin-top-left" style={{ marginTop: 4 }}>
+
       {/* 💬 コメント一覧 */}
-      <div style={{ marginBottom: 8 }}>
+      <div style={{ marginBottom: 4 }}>
         {comments.map((c) => (
-          <div key={c.id} style={{ fontSize: 10, marginBottom: 4, background: "#f9f9f9", padding: "4px 8px", borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid #f0f0f0" }}>
-            <div style={{ color: "#666" }}>
+          <div key={c.id} style={{
+            fontSize: 9, // 少しフォントを小さく
+            marginBottom: 3,
+            background: "#f9f9f9",
+            padding: "3px 6px", // パディングを詰める
+            borderRadius: 6,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            border: "1px solid #f0f0f0"
+          }}>
+            <div style={{ color: "#666", lineHeight: 1.2 }}>
               <b style={{ color: "#333" }}>{c.userName}</b> {c.text}
             </div>
             {c.userId === auth.currentUser?.uid && (
-              <span onClick={(e) => { e.stopPropagation(); setDeleteId(c.id); }} style={{ marginLeft: 8, cursor: "pointer", color: "#ccc", fontSize: 10 }}> × </span>
+              <span onClick={(e) => { e.stopPropagation(); setDeleteId(c.id); }} style={{ marginLeft: 6, cursor: "pointer", color: "#ccc", fontSize: 10 }}> × </span>
             )}
           </div>
         ))}
       </div>
 
       {/* ⌨️ 入力エリア */}
-      <div style={{ display: "flex", gap: 4 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ display: "flex", gap: 3 }} onClick={(e) => e.stopPropagation()}>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="コメント..."
           onKeyDown={(e) => { if (e.key === "Enter") handleSend(); }}
-          style={{ flex: 1, padding: "5px 10px", borderRadius: 10, border: "1px solid #eee", outline: "none", fontSize: 10, background: "#fff", cursor: "text" }}
+          style={{
+            flex: 1,
+            padding: "4px 8px",
+            borderRadius: 8,
+            border: "1px solid #eee",
+            outline: "none",
+            fontSize: 9, // 入力文字も小さく
+            background: "#fff",
+            cursor: "text"
+          }}
         />
-        <button onClick={handleSend} style={{ padding: "5px 12px", borderRadius: 10, border: "none", background: "#444", color: "#fff", fontSize: 10, fontWeight: "bold", cursor: "pointer", transition: "0.2s" }}> 送信 </button>
+        <button onClick={handleSend} style={{
+          padding: "4px 10px",
+          borderRadius: 8,
+          border: "none",
+          background: "#444",
+          color: "#fff",
+          fontSize: 9,
+          fontWeight: "bold",
+          cursor: "pointer"
+        }}> 送信 </button>
       </div>
 
       {/* 🗑 削除モーダル */}
