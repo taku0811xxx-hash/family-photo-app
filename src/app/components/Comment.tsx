@@ -87,13 +87,13 @@ export default function Comment({ postId }: { postId: string }) {
   };
 
   return (
-    <div className="transform scale-[0.8] md:scale-100 origin-top-left" style={{ marginTop: 4 }}>
+    <div className="transform scale-[0.6] md:scale-100 origin-top-left" style={{ marginTop: 4 }}>
 
       {/* 💬 コメント一覧 */}
       <div style={{ marginBottom: 4 }}>
         {comments.map((c) => (
           <div key={c.id} style={{
-            fontSize: 9, // 少しフォントを小さく
+            fontSize: 8, // 少しフォントを小さく
             marginBottom: 3,
             background: "#f9f9f9",
             padding: "3px 6px", // パディングを詰める
